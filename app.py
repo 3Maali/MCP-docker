@@ -48,8 +48,8 @@ content = {
 ],
 
             'expected_results': [
-                {'result' : "تقليل الحوادث بنسبة " , 'number': 20 },
-                {'result' : "تحسين كفاءة التنقل داخل الحرم بنسبة " , 'number': 30 },
+                {'result' : "تقليل الحوادث  " , 'number': 20 },
+                {'result' : "تحسين كفاءة التنقل داخل الحرم  " , 'number': 30 },
                 {'result' : "تقليل وقت الاستجابة للطوارئ " , 'number': 10 },
 
             ],
@@ -166,9 +166,9 @@ content = {
 
 
             'expected_results': [
-                {'result' : "Reduce incidents by " , 'number': 20 },
-                {'result' : "Improve movement efficiency within the Haram by " , 'number': 30 },
-                {'result' : "Reduce emergency response time by " , 'number': 10 },
+                {'result' : "Reduce incidents  " , 'number': 20 },
+                {'result' : "Improve movement efficiency within the Haram  " , 'number': 30 },
+                {'result' : "Reduce emergency response time  " , 'number': 10 },
 
             ],
             'map_title': "Makkah Crowd Management Zones",
@@ -552,6 +552,10 @@ st.markdown(global_css, unsafe_allow_html=True)
 
     # Sidebar for Language Selector and Alert Settings
 with st.sidebar:
+    st.image("sda_sda.png",width=90)
+    st.image("lewagon_logo.png" , width=160)  # Consistent width with CSS
+
+
     st.markdown('<div class="language-selector">', unsafe_allow_html=True)
     col_icon, col_select = st.columns([1, 3])
     with col_icon:
@@ -612,6 +616,13 @@ st.session_state.language = 'Arabic' if language == "العربية" else 'Engli
 
 # Page 1: Team Introduction
 with tabs[0]:
+
+    col_1 , col_2 = st.columns([3, 1])
+
+    col_1.image("sda_sda.png",width=150)
+    col_2.image("lewagon_logo.png" , width=250)
+
+
     # Hero Section with Image Background
     pro = content[st.session_state.language]['team']['title']
 
@@ -628,19 +639,31 @@ with tabs[0]:
     # 2. Project Overview
     st.subheader("نبذة عن المشروع" if st.session_state.language == 'Arabic' else "Project Overview")
     overview = content[st.session_state.language]['team']['overview']
+    text_align = "right" if st.session_state.language == 'Arabic' else "left"
     st.markdown(
     f"""
     <div class="team-card">
-        <h5 style="text-align: justify; direction: rtl;">{overview}</h5>
+        <h4 style="text-align: justify; direction: {'rtl' if st.session_state.language == 'Arabic' else 'ltr'};">{overview}</h4>
     </div>
     """,
-    unsafe_allow_html=True
-)
+     unsafe_allow_html=True
+    )
+
+#     st.subheader("نبذة عن المشروع" if st.session_state.language == 'Arabic' else "Project Overview")
+#     overview = content[st.session_state.language]['team']['overview']
+#     st.markdown(
+#     f"""
+#     <div class="team-card">
+#         <h5 style="text-align: justify; direction: rtl;">{overview}</h5>
+#     </div>
+#     """,
+#     unsafe_allow_html=True
+# )
 
 
     st.markdown('</div>', unsafe_allow_html=True)
-    st.markdown("<br><br>", unsafe_allow_html=True)  # يضيف سطرين فارغين
-    st.markdown("<br><br>", unsafe_allow_html=True)  # يضيف سطرين فارغين
+    st.markdown("<br><br>", unsafe_allow_html=True)
+    st.markdown("<br><br>", unsafe_allow_html=True)
 
 
     # 3. Target Audience
@@ -674,15 +697,15 @@ with tabs[0]:
             st.markdown(f""" <div class="target-row-container"> <h5 class="target-row-text">   {benefit} </h5>  </div>""" ,  unsafe_allow_html=True)
 
 
-            st.markdown("<br><br>", unsafe_allow_html=True)  # يضيف سطرين فارغين
+            st.markdown("<br><br>", unsafe_allow_html=True)
 
 
 # Add spacing after the section
     st.markdown("<br><br>", unsafe_allow_html=True)
 
 
-    st.markdown("<br><br>", unsafe_allow_html=True)  # يضيف سطرين فارغين
-    st.markdown("<br><br>", unsafe_allow_html=True)  # يضيف سطرين فارغين
+    st.markdown("<br><br>", unsafe_allow_html=True)
+    st.markdown("<br><br>", unsafe_allow_html=True)
 
     st.divider()
 
@@ -703,8 +726,9 @@ with tabs[0]:
             st.markdown(
             f"""
             <div class="team-card">
-                <h4> {goal}</h4>
-                <h1> <span style="color: #00ff00;"> {number} % </span> </h1>
+               <h4> {" "} </h4>
+                <h3> {goal}</h3>
+
             </div>
             """,
             unsafe_allow_html=True
@@ -717,12 +741,12 @@ with tabs[0]:
     st.divider()
 
 
-    st.markdown("<br><br>", unsafe_allow_html=True)  # يضيف سطرين فارغين
+    st.markdown("<br><br>", unsafe_allow_html=True)
     st.markdown("<br><br>", unsafe_allow_html=True)
 
     # 5. Makkah Crowd Management Zones Map
     st.subheader(content[st.session_state.language]['team']['map_title'])
-    st.write(" تعرض الخريطة المناطق الرئيسية المراقبة باستخدام نماذج التعلم العميق لتحليل كثافة الحشود في الوقت الفعلي. وتشمل التالي : الطواف - الصفا - المروه" if st.session_state.language == 'Arabic' else "The map shows key areas monitored using deep learning models for real-time crowd density analysis. including : Tawaf  , Safa , Marwa")
+    st.write(" تعرض الخريطة المناطق الرئيسية المراقبة باستخدام نماذج التعلم العميق لتحليل كثافة الحشود في الوقت الفعلي. وتشمل التالي : الطواف - الصفا - اخرى" if st.session_state.language == 'Arabic' else "The map shows key areas monitored using deep learning models for real-time crowd density analysis. including : Tawaf  , Safa , Other")
     df_map = pd.DataFrame({
         "lat": [21.4225, 21.4200, 21.4250, 21.4225],  # Repeated Kaaba for Tawaf
         "lon": [39.8262, 39.8250, 39.8270, 39.8262],
@@ -732,8 +756,8 @@ with tabs[0]:
     fig.update_layout(mapbox_style="open-street-map", margin={"r":0,"t":0,"l":0,"b":0})
     st.plotly_chart(fig, use_container_width=False)
     st.markdown('</div>', unsafe_allow_html=True)
-    st.markdown("<br><br>", unsafe_allow_html=True)  # يضيف سطرين فارغين
-    st.markdown("<br><br>", unsafe_allow_html=True)  # يضيف سطرين فارغين
+    st.markdown("<br><br>", unsafe_allow_html=True)
+    st.markdown("<br><br>", unsafe_allow_html=True)
 
 
     # 6. Team Members
@@ -1089,16 +1113,16 @@ with tabs[3]:
                 st.dataframe(resources, use_container_width=True)
 
                 # Bar chart for resource distribution
-                fig = px.bar(
-                    resources,
-                    x=["Location"],
-                    y="Security Personnel Ratio",
-                    title="توزيع الموارد حسب الموقع" if st.session_state.language == 'Arabic' else "Resource Distribution by Location",
-                    labels={
-                        "value": "العدد" if st.session_state.language == 'Arabic' else "Count",
-                        "variable": "نوع المورد" if st.session_state.language == 'Arabic' else "Resource Type"
-                    }
-                )
+                # fig = px.bar(
+                #     resources,
+                #     x=["Location"],
+                #     y="Security Personnel Ratio",
+                #     title="توزيع الموارد حسب الموقع" if st.session_state.language == 'Arabic' else "Resource Distribution by Location",
+                #     labels={
+                #         "value": "العدد" if st.session_state.language == 'Arabic' else "Count",
+                #         "variable": "نوع المورد" if st.session_state.language == 'Arabic' else "Resource Type"
+                #     }
+                # )
                 fig.update_traces(marker_color='#00ff00')
                 fig.update_layout(
                     plot_bgcolor='black',
@@ -1481,6 +1505,6 @@ with tabs[2]:
 # Footer
 st.markdown("---")
 st.write("تم تطويره لإدارة الحشود في مكة © 2025 | Developed for Makkah Crowd Management © 2025")
-
-
-#
+# col1, col2 = st.columns([2, 1])
+# col1.image("SDA_logo.png",width=250)
+# col2.image("lewagon_logo.png" , width=250)
