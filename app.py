@@ -1091,8 +1091,8 @@ with tabs[3]:
                 # Bar chart for resource distribution
                 fig = px.bar(
                     resources,
-                    x=["Security Personnel Needed", "Medical Teams Needed"],
-                    y="Location",
+                    x=["Location"],
+                    y="Security Personnel Ratio",
                     title="توزيع الموارد حسب الموقع" if st.session_state.language == 'Arabic' else "Resource Distribution by Location",
                     labels={
                         "value": "العدد" if st.session_state.language == 'Arabic' else "Count",
