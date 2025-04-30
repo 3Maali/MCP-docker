@@ -27,7 +27,7 @@ if 'forecast_df' not in st.session_state:
 content = {
     'Arabic': {
         'team': {
-            'title': "مشروع إدارة الحشود في مكة المكرمة",
+            'title': " إدارة الحشود في مكة المكرمة",
             'overview': "مشروع إدارة الحشود في مكة المكرمة هو مبادرة تقنية رائدة تعتمد على الذكاء الاصطناعي لتحسين إدارة الحشود خلال الحج والعمرة. من خلال تحليل البيانات ونماذج التعلم الآلي، نتوقع كثافة الحشود في الطواف، السعي، ومناطق أخرى، مما يمكّن السلطات من تقليل المخاطر، تحسين الحركة، وضمان تجربة أكثر أمانًا وتنظيمًا لملايين الحجاج.",
             'target_audience': [
     {
@@ -71,9 +71,9 @@ content = {
             'description': "استكشف مقاطع الفيديو التي تعرض ديناميكيات الحشود واستراتيجيات الإدارة في مكة المكرمة.",
             'captions': [
                 "تحليل كثافة الحشود في الطواف",
-                "مراقبة الطواف في الوقت الفعلي",
-                "تدفق الحشود في السعي",
-                "نظرة عامة على محيط الكعبة"
+                "تحليل كثافة الحشود في الطواف",
+                "محيط الكعبة",
+                "تدفق الحشود أثناء السعي"
             ],
             'error': "ملف الفيديو {file} غير موجود. تأكد من وجوده في مجلد 'videos'."
         },
@@ -143,7 +143,7 @@ content = {
     },
     'English': {
         'team': {
-            'title': "Makkah Crowd Management Project",
+            'title': "Makkah Crowd Management ",
             'overview': "The Makkah Crowd Management Project is an innovative AI-driven initiative to enhance crowd management during Hajj and Umrah. Using advanced data analytics and machine learning, we predict crowd density in Tawaf, Saei, and other areas, enabling authorities to reduce risks, optimize movement, and ensure a safer, more efficient experience for millions of pilgrims.",
             'target_audience': [
 
@@ -187,9 +187,10 @@ content = {
             'description': "Explore videos showcasing crowd dynamics and management strategies in Makkah.",
             'captions': [
                 "Tawaf Crowd Density Analysis",
-                "Real-Time Tawaf Monitoring",
-                "Saye Pathway Crowd Flow",
-                "Kaaba Surroundings Overview"
+                "Tawaf Crowd Density Analysis 2",
+                "The perimeter of the Kaaba",
+                "Crowd flow during Sa'i"
+
             ],
             'error': "Video file {file} not found. Ensure it exists in the 'videos' folder."
         },
@@ -628,14 +629,14 @@ with tabs[0]:
     st.subheader("نبذة عن المشروع" if st.session_state.language == 'Arabic' else "Project Overview")
     overview = content[st.session_state.language]['team']['overview']
     st.markdown(
-            f"""
-            <div class="team-card">
-                <h5> {overview}</h5>
+    f"""
+    <div class="team-card">
+        <h5 style="text-align: justify; direction: rtl;">{overview}</h5>
+    </div>
+    """,
+    unsafe_allow_html=True
+)
 
-            </div>
-            """,
-            unsafe_allow_html=True
-            )
 
     st.markdown('</div>', unsafe_allow_html=True)
     st.markdown("<br><br>", unsafe_allow_html=True)  # يضيف سطرين فارغين
@@ -994,9 +995,9 @@ with tabs[4]:
         "كيف يمكنني تخصيص التنبيهات؟" if st.session_state.language == 'Arabic' else "How can I customize alerts?":
             "استخدم إعدادات التنبيهات في الشريط الجانبي لتحديد حدود الكثافة لكل منطقة." if st.session_state.language == 'Arabic'
             else "Use the Alert Settings in the sidebar to set density thresholds for each area.",
-        "هل يمكنني تنزيل التوقعات؟" if st.session_state.language == 'Arabic' else "Can I download the forecasts?":
-            "نعم، يمكنك تنزيل التوقعات بصيغة CSV من صفحة التوقعات." if st.session_state.language == 'Arabic'
-            else "Yes, you can download the forecasts as a CSV file from the Prediction page."
+        "كيفية استخدام تشات بوت تلقرام؟" if st.session_state.language == 'Arabic' else "How to use Telegram chatbot?":
+            "" if st.session_state.language == 'Arabic'
+            else "By scanning the QR code on the project page or clicking on the link"
     }
 
     for question, answer in faqs.items():
@@ -1052,13 +1053,13 @@ with tabs[3]:
     if 'forecast_df' in st.session_state and st.session_state.forecast_df is not None:
         with st.form("resource_form"):
             security_ratio = st.slider(
-                "نسبة أفراد الأمن لكل شخص" if st.session_state.language == 'Arabic' else "Security Personnel per Person",
-                100, 1000, 500, step=100,
+                "نسبة أفراد الأمن لكل شخص" if st.session_state.language == 'Arabic' else "Security Personnel Available",
+                100, 5000, 2000, step=100,
                 key="security_ratio"  # Unique key
             )
             medical_ratio = st.slider(
-                "نسبة الفرق الطبية لكل شخص" if st.session_state.language == 'Arabic' else "Medical Teams per Person",
-                1000, 5000, 2000, step=500,
+                "نسبة الفرق الطبية لكل شخص" if st.session_state.language == 'Arabic' else "Medical Teams Available",
+                100, 5000, 2000, step=100,
                 key="medical_ratio"  # Unique key
             )
             selected_day = st.selectbox(
@@ -1079,8 +1080,8 @@ with tabs[3]:
                 resources = pd.DataFrame({
                     "Location": ["الطواف", "السعي", "أخرى"] if st.session_state.language == 'Arabic' else ["Tawaf", "Saei", "Other"],
                     "Crowd Size": [tawaf_crowd, saei_crowd, other_crowd],
-                    "Security Personnel Needed": [int(crowd / security_ratio) for crowd in [tawaf_crowd, saei_crowd, other_crowd]],
-                    "Medical Teams Needed": [int(crowd / medical_ratio) for crowd in [tawaf_crowd, saei_crowd, other_crowd]]
+                    "Security Personnel Ratio": [int(crowd / security_ratio) for crowd in [tawaf_crowd, saei_crowd, other_crowd]],
+                    "Medical Teams Ratio": [int(crowd / medical_ratio) for crowd in [tawaf_crowd, saei_crowd, other_crowd]]
                 })
 
                 # Display results
@@ -1483,17 +1484,3 @@ st.write("تم تطويره لإدارة الحشود في مكة © 2025 | Deve
 
 
 #
-
-camera_image = st.camera_input("Take a picture")
-if camera_image is not None:
-    image = Image.open(camera_image)
-    st.image(image, caption="Captured Image", use_column_width=True)
-
-    if st.button("Detect Objects",key="object_detection"):
-        print('here is prediciton')
-        st.image(camera_image, caption="Detected Image", use_column_width=True)
-        #boxes = res[0].boxes
-        with st.expander("Detection Results"):
-            print('here is prediciton')
-            #for box in boxes:
-            #st.write(box.data)
