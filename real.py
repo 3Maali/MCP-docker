@@ -1,7 +1,7 @@
 import pandas as pd
 import numpy as np
 from darts import TimeSeries
-from darts.models import Prophet, ARIMA
+from darts.models import ARIMA
 from darts.metrics import mape
 import warnings
 import darts
@@ -35,7 +35,7 @@ def load_data(data_path='./data/Final_Daily_Umrah_Statistics_2024__Tawaf__Saei__
 
 def generate_forecast(language='English'):
     """
-    Generate a 7-day crowd forecast for Tawaf, Saei, and Other using the best model (Prophet or ARIMA).
+    Generate a 7-day crowd forecast for Tawaf, Saei, and Other using the best model (ARIMA).
 
     Args:
         language (str): Language for crowd level labels ('Arabic' or 'English').
@@ -52,17 +52,8 @@ def generate_forecast(language='English'):
         train = series[:-7]
         val = series[-7:]
 
-        # Define holidays
-        holidays = pd.DataFrame({
-            'holiday': 'Ramadan',
-            'ds': pd.to_datetime(['2024-03-11', '2024-04-09']),
-            'lower_window': -1,
-            'upper_window': 1
-        })
-
         # Initialize models
         models = [
-            Prophet(yearly_seasonality=True, weekly_seasonality=True, holidays=holidays),
             ARIMA(p=1, d=0, q=1, seasonal_order=(1, 0, 1, 7))
         ]
 
@@ -139,26 +130,26 @@ def generate_forecast(language='English'):
         # Define crowd level labels based on language
         if language == 'Arabic':
             forecast_df['Crowd_Level'] = forecast_df['Total_Predicted'].apply(
-                lambda x: 'منخفض' if x < 70000 else 'متوسط' if x < 90000 else 'مرتفع'
+                lambda x: 'منخفض' if x < 66069 else 'متوسط' if x < 89883 else 'مرتفع'
             )
             forecast_df['Tawaf_Crowd_Level'] = forecast_df['Tawaf'].apply(
-                lambda x: 'منخفض' if x < 20000 else 'متوسط' if x < 50000 else 'مرتفع'
+                lambda x: 'منخفض' if x < 42944 else 'متوسط' if x < 58423 else 'مرتفع'
             )
             forecast_df['Saei_Crowd_Level'] = forecast_df['Saei'].apply(
-                lambda x: 'منخفض' if x < 8000 else 'متوسط' if x < 20000 else 'مرتفع'
+                lambda x: 'منخفض' if x < 16517 else 'متوسط' if x < 22470 else 'مرتفع'
             )
             forecast_df['Other_Crowd_Level'] = forecast_df['Other'].apply(
                 lambda x: 'منخفض' if x < 2000 else 'متوسط' if x < 7800 else 'مرتفع'
             )
         else:
             forecast_df['Crowd_Level'] = forecast_df['Total_Predicted'].apply(
-                lambda x: 'Low' if x < 70000 else 'Medium' if x < 90000 else 'High'
+                lambda x: 'Low' if x < 66069 else 'Medium' if x < 89883 else 'High'
             )
             forecast_df['Tawaf_Crowd_Level'] = forecast_df['Tawaf'].apply(
-                lambda x: 'Low' if x < 20000 else 'Medium' if x < 50000 else 'High'
+                lambda x: 'Low' if x < 42944 else 'Medium' if x < 58423 else 'High'
             )
             forecast_df['Saei_Crowd_Level'] = forecast_df['Saei'].apply(
-                lambda x: 'Low' if x < 8000 else 'Medium' if x < 20000 else 'High'
+                lambda x: 'Low' if x < 16517 else 'Medium' if x < 22470 else 'High'
             )
             forecast_df['Other_Crowd_Level'] = forecast_df['Other'].apply(
                 lambda x: 'Low' if x < 2000 else 'Medium' if x < 7800 else 'High'
