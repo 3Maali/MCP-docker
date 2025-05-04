@@ -4,8 +4,6 @@ telegram
 pandas
 numpy
 datetime
-plotly.express
-pandas
 darts
 opencv-python
 plotly
