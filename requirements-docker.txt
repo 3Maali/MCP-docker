@@ -1,9 +1,8 @@
 streamlit
 plotly>=5.0.0
 ultralytics
-telegram
+python-telegram-bot
 pandas
 numpy
-datetime
 darts
 opencv-python
