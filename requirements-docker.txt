@@ -8,3 +8,4 @@ plotly.express
 pandas
 darts
 opencv-python
+plotly
