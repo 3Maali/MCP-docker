@@ -1,10 +1,10 @@
+
 streamlit
+plotly>=5.0.0
 ultralytics
 telegram
 pandas
 numpy
 datetime
-plotly.express
 darts
 opencv-python
-plotly
