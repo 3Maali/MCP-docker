@@ -6,3 +6,4 @@ pandas
 numpy
 darts
 opencv-python-headless
+Pillow
