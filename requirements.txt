@@ -5,5 +5,4 @@ python-telegram-bot
 pandas
 numpy
 darts
-opencv-python
 opencv-python-headless
