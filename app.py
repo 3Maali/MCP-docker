@@ -675,7 +675,7 @@ with tabs[0]:
 
 # Column 1: Single image
     with col1:
-        st.image("https://drive.google.com/uc?export=download&id=1drr_bN6f2XrmEC0iez_F_ZH8tnO2jPY9", use_container_width=True)
+        st.image("team.png", use_container_width=True)
 
 # Column 2: Target audience items in rows
     with col2:
