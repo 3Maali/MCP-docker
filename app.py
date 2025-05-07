@@ -274,7 +274,7 @@ global_css = """
 
 p, div, h1, h2, h3, h4, h5, h6 {
     text-align: center;
-    color: #00ff00;  /* Green for headings */
+    color: #111111;  /* Green for headings */
 }
 .arabic-text {
     font-family: 'Noto Sans Arabic', sans-serif;
