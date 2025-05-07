@@ -7,11 +7,7 @@ import warnings
 import darts
 
 # Check darts version for compatibility
-DARTS_VERSION = darts.__version__
-if DARTS_VERSION >= '0.30.0':
-    TS_DF_METHOD = 'to_dataframe'
-else:
-    TS_DF_METHOD = 'pd_dataframe'
+TS_DF_METHOD = 'pd_dataframe'
 
 warnings.filterwarnings('ignore')
 
