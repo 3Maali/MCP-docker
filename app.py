@@ -675,7 +675,7 @@ with tabs[0]:
 
 # Column 1: Single image
     with col1:
-        st.image("team.png", use_container_width=True)
+        st.image("team.png")
 
 # Column 2: Target audience items in rows
     with col2:
