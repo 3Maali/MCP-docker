@@ -11,10 +11,10 @@
 🔗 **[Live Demo](https://your-streamlit-app-link.streamlit.app/)**  
 
 ## Team 
-- 📊 [@Alanoudniaf](https://github.com/Alanoudniaf)
-- 📊 [@janaabdulaziz](https://github.com/janaabdulaziz)
-- 📊 [@SARAHMALOTAIBI](https://github.com/SARAHMALOTAIBI)
-- 📊 [@abraraldosari](https://github.com/abraraldosari)
+[@Alanoudniaf](https://github.com/Alanoudniaf)
+[@janaabdulaziz](https://github.com/janaabdulaziz)
+[@SARAHMALOTAIBI](https://github.com/SARAHMALOTAIBI)
+[@abraraldosari](https://github.com/abraraldosari)
 - 📊 [@3Maali](https://github.com/3Maali) 
 
 ---
