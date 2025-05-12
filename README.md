@@ -9,7 +9,13 @@
 > Built with Streamlit | YOLOv8 | Forecasting Models | QR-based Floor Control
 
 🔗 **[Live Demo](https://your-streamlit-app-link.streamlit.app/)**  
-📁 **[GitHub Repository](https://github.com/your-username/makkah-crowd-management.git)**
+
+## Team 
+- 📊 @Alanoudniaf
+- 📊 @janaabdulaziz
+- 📊 @SARAHMALOTAIBI 
+- 📊 @abraraldosari
+- 📊 @3Maali
 
 ---
 
