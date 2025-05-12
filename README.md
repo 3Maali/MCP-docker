@@ -11,7 +11,7 @@
 🔗 **[Live Demo](https://your-streamlit-app-link.streamlit.app/)**  
 
 ## Team 
-- 📊 @Alanoudniaf
+- 📊 Alanoudniaf@
 - 📊 @janaabdulaziz
 - 📊 @SARAHMALOTAIBI 
 - 📊 @abraraldosari
