@@ -9,3 +9,6 @@ python-telegram-bot==20.7
 darts==0.30.0
 torch==2.3.1
 torchvision==0.18.1
+
+qrcode==7.4.2
+pillow==10.4.0
