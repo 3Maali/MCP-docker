@@ -6,13 +6,112 @@ import plotly.express as px
 import cv2
 from ultralytics import YOLO
 from PIL import Image
-from datetime import datetime
+from datetime import datetime , timedelta
 from real import generate_forecast
 import warnings
 import base64
 import tempfile
 
+
+
+import sqlite3
+import qrcode
+from cryptography.fernet import Fernet
+import json
+import uuid
+import io
+from fpdf import FPDF
+import os
+import logging
+
 warnings.filterwarnings('ignore')
+
+
+
+# إعداد التسجيل لتتبع الأخطاء
+logging.basicConfig(level=logging.DEBUG)
+logger = logging.getLogger(__name__)
+
+
+# إعداد التشفير لرموز QR
+key_file = "fernet_key.key"
+if os.path.exists(key_file):
+    with open(key_file, "rb") as f:
+        key = f.read()
+else:
+    key = Fernet.generate_key()
+    with open(key_file, "wb") as f:
+        f.write(key)
+cipher = Fernet(key)
+
+# إعداد قاعدة البيانات
+def init_db():
+    try:
+        conn = sqlite3.connect("crowd_management.db")
+        cursor = conn.cursor()
+
+        # جدول المعتمرين
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS pilgrims (
+                id TEXT PRIMARY KEY,
+                entry_time TEXT,
+                floor TEXT,
+                exit_time TEXT
+            )
+        ''')
+
+        # جدول الأدوار
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS floors (
+                floor TEXT PRIMARY KEY,
+                current_count INTEGER,
+                max_capacity INTEGER,
+                status TEXT,
+                last_updated TEXT
+            )
+        ''')
+
+        # جدول سجل الأنشطة
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS activity_log (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                pilgrim_id TEXT,
+                action TEXT,
+                floor TEXT,
+                timestamp TEXT
+            )
+        ''')
+
+        cursor.execute("INSERT INTO activity_log (pilgrim_id, action, floor, timestamp) VALUES (?, ?, ?, ?)",
+               ("test_pilgrim_1", "Entry", "Ground", datetime.now().strftime("%Y-%m-%d %H:%M:%S")))
+        cursor.execute("INSERT INTO activity_log (pilgrim_id, action, floor, timestamp) VALUES (?, ?, ?, ?)",
+               ("test_pilgrim_2", "Exit", "Ground", datetime.now().strftime("%Y-%m-%d %H:%M:%S")))
+
+        # إضافة بيانات افتراضية للأدوار
+        cursor.execute('''
+            INSERT OR IGNORE INTO floors (floor, current_count, max_capacity, status, last_updated)
+            VALUES (?, ?, ?, ?, ?), (?, ?, ?, ?, ?), (?, ?, ?, ?, ?)
+        ''', (
+            'Ground', 0, 50000, 'Available', datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            'First', 0, 30000, 'Available', datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            'Second', 0, 20000, 'Available', datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        ))
+
+        conn.commit()
+        logger.info("Database initialized successfully with tables: pilgrims, floors, activity_log")
+    except sqlite3.Error as e:
+        logger.error(f"Error initializing database: {e}")
+        st.error(f"خطأ في إعداد قاعدة البيانات: {e}")
+    finally:
+        conn.close()
+
+# إنشاء مجلد لتخزين رموز QR
+if not os.path.exists("qr_codes"):
+    os.makedirs("qr_codes")
+
+# إعداد قاعدة البيانات عند بدء التطبيق
+init_db()
+
 
 # Page configuration
 st.set_page_config(page_title="Makkah Crowd Management Dashboard", layout="wide")
@@ -61,7 +160,7 @@ content = {
                 {"name": "العنود نايف", "emoji": ":purple_heart:","more":"Team Leader" ,  "linkedin": "https://www.linkedin.com/in/alanoud-razin-98aa6b2a7/"},
                 {"name": "معالي الخالدي", "emoji": ":blue_heart:","more":"Team Member" , "linkedin": "https://www.linkedin.com/in/maali-alkhaldi-991967215/"},
                 {"name": "سارة العتيبي", "emoji": ":green_heart:", "more":"Team Member" ,"linkedin": "https://www.linkedin.com/in/sarah-alotaibi-6576921a7?utm_source=share&utm_campaign=share_via&utm_content=profile&utm_medium=android_app"},
-                {"name": "جنى المجلي", "emoji": ":white_heart:", "more":"Team Member" ,"linkedin": "https://www.linkedin.com/in/jana-almujally-031a5223b?utm_source=share&utm_campaign=share_via&utm_content=profile&utm_medium=ios_app"},
+                {"name":"اثير الكناني", "emoji": ":white_heart:", "more":"Team Member" ,"linkedin": "https://www.linkedin.com/in/jana-almujally-031a5223b?utm_source=share&utm_campaign=share_via&utm_content=profile&utm_medium=ios_app"},
                 {"name": " أبرار الدوسري", "emoji": ":yellow_heart:","more":"Team Member" , "linkedin": "http://linkedin.com/in/abrar-aldosari-592199215"}
             ],
             'map_locations': ["الكعبة", "الصفا", "المروة", "الطواف"]
@@ -138,12 +237,13 @@ content = {
 
         'nav': {
             'language_label': "اللغة",
-            'pages': ["تعريف بالفريق", "توقع الحشود", "مركز المراقبة" , "تخصيص الموارد" ,   "أسئلة شائعة" , "عن المشروع"]
+            'pages': ['تعريف بالفريق', 'توقع الحشود', 'مركز المراقبة', 'تخصيص الموارد', 'أسئلة شائعة', 'عن المشروع', 'إدارة الأدوار', 'التقارير']
+
         }
     },
     'English': {
         'team': {
-            'title': "Makkah Crowd Management ",
+            'title': "SafeCrowd  ",
             'overview': "The Makkah Crowd Management Project is an innovative AI-driven initiative to enhance crowd management during Hajj and Umrah. Using advanced data analytics and machine learning, we predict crowd density in Tawaf, Saei, and other areas, enabling authorities to reduce risks, optimize movement, and ensure a safer, more efficient experience for millions of pilgrims.",
             'target_audience': [
 
@@ -177,7 +277,7 @@ content = {
                 {"name": "Alanoud Naif", "emoji": ":purple_heart:", "more":"Team Leader","linkedin": "https://www.linkedin.com/in/alanoud-razin-98aa6b2a7/"},
                 {"name": "Maali Alkhaldi", "emoji": ":blue_heart:", "more":"Team Member","linkedin": "https://www.linkedin.com/in/maali-alkhaldi-991967215/"},
                 {"name": "Sarah Alotaibi", "emoji": ":green_heart:", "more":"Team Member","linkedin": "https://www.linkedin.com/in/sarah-alotaibi-6576921a7?utm_source=share&utm_campaign=share_via&utm_content=profile&utm_medium=android_app"},
-                {"name": "Jana Almujally", "emoji": ":white_heart:", "more":"Team Member","linkedin": "https://www.linkedin.com/in/jana-almujally-031a5223b?utm_source=share&utm_campaign=share_via&utm_content=profile&utm_medium=ios_app"},
+                {"name": "ِAtheer Alkenani", "emoji": ":white_heart:", "more":"Team Member","linkedin": "https://www.linkedin.com/in/jana-almujally-031a5223b?utm_source=share&utm_campaign=share_via&utm_content=profile&utm_medium=ios_app"},
                 {"name": "Abrar Aldosari", "emoji": ":yellow_heart:", "more":"Team Member","linkedin": "http://linkedin.com/in/abrar-aldosari-592199215"}
             ],
             'map_locations': ["Kaaba", "Safa", "Marwa", "Tawaf"]
@@ -256,7 +356,7 @@ content = {
 
         'nav': {
             'language_label': "Language",
-            'pages': ["Team Introduction", "Crowd Prediction", "Control Center" , "Resource Allocation" , "FAQ", "About" ]
+            'pages': ['Team Introduction', 'Crowd Prediction', 'Control Center', 'Resource Allocation', 'FAQ', 'About', 'Floor Management', 'Reports']
         }
     }
 }
@@ -550,10 +650,15 @@ st.markdown(global_css, unsafe_allow_html=True)
 
 
 
+
     # Sidebar for Language Selector and Alert Settings
 with st.sidebar:
-    st.image("sda_sda.png",width=90)
-    st.image("lewagon_logo.png" , width=160)  # Consistent width with CSS
+    # st.image("SafeCrowd-Picsart-AiImageEnhancer.png", width=100)
+    st.image("LogoSafeCrowd.png",width=100)
+
+
+    # st.image("sda_sda.png",width=90)
+    # st.image("lewagon_logo.png" , width=160)  # Consistent width with CSS
 
 
     st.markdown('<div class="language-selector">', unsafe_allow_html=True)
@@ -617,129 +722,112 @@ st.session_state.language = 'Arabic' if language == "العربية" else 'Engli
 # Page 1: Team Introduction
 with tabs[0]:
 
-    col_1 , col_2 = st.columns([3, 1])
+    col_1, col_2 = st.columns([3, 1])
+    col_2.image("SafeCrowd-Picsart-AiImageEnhancer.png", width=200)
+    col_1.image("LogoSafeCrowd.png" ,width=120 )
 
-    col_1.image("sda_sda.png",width=150)
-    col_2.image("lewagon_logo.png" , width=250)
 
+    # col_1.image("sda_sda.png", width=150)
+    # col_2.image("lewagon_logo.png", width=250)
 
     # Hero Section with Image Background
+
     pro = content[st.session_state.language]['team']['title']
 
+
+    # Title and Button
     st.markdown(
-    f"""
-    <div class="hero-section">
-        <h1 class="hero-title">{pro}</h1>
-    </div>
-    """,
-    unsafe_allow_html=True
-)
-    # 1. Project Title
-    # st.title(content[st.session_state.language]['team']['title'])
+        f"""
+        <div class="hero-section">
+            <h1 class="hero-title">{pro}</h1>
+
+
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
+
     # 2. Project Overview
+    st.markdown("<br><br>", unsafe_allow_html=True)
+    st.markdown("<br><br>", unsafe_allow_html=True)
+
+    st.markdown("<br><br>", unsafe_allow_html=True)
+
     st.subheader("نبذة عن المشروع" if st.session_state.language == 'Arabic' else "Project Overview")
     overview = content[st.session_state.language]['team']['overview']
     text_align = "right" if st.session_state.language == 'Arabic' else "left"
+    st.markdown("<br><br>", unsafe_allow_html=True)
+
     st.markdown(
-    f"""
-    <div class="team-card">
-        <h4 style="text-align: justify; direction: {'rtl' if st.session_state.language == 'Arabic' else 'ltr'};">{overview}</h4>
-    </div>
-    """,
-     unsafe_allow_html=True
+        f"""
+        <div>
+            <h4 style="text-align: justify; direction: {'rtl' if st.session_state.language == 'Arabic' else 'ltr'}; line-height: 1.6;">
+                {overview}
+            </h4>
+        </div>
+        """,
+        unsafe_allow_html=True
     )
 
-#     st.subheader("نبذة عن المشروع" if st.session_state.language == 'Arabic' else "Project Overview")
-#     overview = content[st.session_state.language]['team']['overview']
-#     st.markdown(
-#     f"""
-#     <div class="team-card">
-#         <h5 style="text-align: justify; direction: rtl;">{overview}</h5>
-#     </div>
-#     """,
-#     unsafe_allow_html=True
-# )
-
+    st.markdown("<br><br>", unsafe_allow_html=True)
 
     st.markdown('</div>', unsafe_allow_html=True)
     st.markdown("<br><br>", unsafe_allow_html=True)
     st.markdown("<br><br>", unsafe_allow_html=True)
 
-
     # 3. Target Audience
-
     st.subheader("الفئة المستهدفة" if st.session_state.language == 'Arabic' else "Target Audience")
 
-# Create two columns
-    col1, col2 = st.columns([1, 2])
+    col1, col2 = st.columns([1, 3])
 
-# Column 1: Single image
     with col1:
-        st.image("team.png")
+        st.image("team.png", use_container_width=True)
 
-# Column 2: Target audience items in rows
     with col2:
         for i, target in enumerate(content[st.session_state.language]['team']['target_audience']):
             teams = target['target']
             img = target['img']
             benefit = target['benefit']
             st.markdown(
-            f"""
-            <div class="target-row-container">
-                <img src="{img}" class="target-row-image">
-                <h5 class="target-row-text">{teams}</h5>
-            </div>
-            """,
-            unsafe_allow_html=True
+                f"""
+                <div class="target-row-container" style="text-align: {'right' if st.session_state.language == 'Arabic' else 'left'}; direction: {'rtl' if st.session_state.language == 'Arabic' else 'ltr'};">
+                    <img src="{img}" class="target-row-image">
+                    <h5 class="target-row-text">{teams}</h5>
+                </div>
+                <p style="text-align: {'right' if st.session_state.language == 'Arabic' else 'left'}; direction: {'rtl' if st.session_state.language == 'Arabic' else 'ltr'}; margin-right: {'1rem' if st.session_state.language == 'Arabic' else '0'}; margin-left: {'0' if st.session_state.language == 'Arabic' else '1rem'};">
+                    {benefit}
+                </p>
+                """,
+                unsafe_allow_html=True
             )
-
             st.markdown("<br>", unsafe_allow_html=True)
-            st.markdown(f""" <div class="target-row-container"> <h5 class="target-row-text">   {benefit} </h5>  </div>""" ,  unsafe_allow_html=True)
 
-
-            st.markdown("<br><br>", unsafe_allow_html=True)
-
-
-# Add spacing after the section
     st.markdown("<br><br>", unsafe_allow_html=True)
-
-
     st.markdown("<br><br>", unsafe_allow_html=True)
     st.markdown("<br><br>", unsafe_allow_html=True)
 
     st.divider()
-
 
     # 4. Expected Results
-
     st.subheader("النتائج المتوقعة" if st.session_state.language == 'Arabic' else "Expected Results")
-    coll  = st.columns(3)
+    coll = st.columns(3)
 
-    # st.markdown(f'<div class="target-container">  ', unsafe_allow_html=True)
-
-    for i ,result in enumerate(content[st.session_state.language]['team']['expected_results']):
+    for i, result in enumerate(content[st.session_state.language]['team']['expected_results']):
         with coll[i]:
-            # to do[[[[[[[[ i need to add icons to make all card with the same size ]]]]]]]]
-            # st.markdown(f'<div class="about-card"> <h3>{result}<h3> ', unsafe_allow_html=True)
             goal = result['result']
-            number = result['number']
-            st.markdown(
-            f"""
-            <div class="team-card">
-               <h4> {" "} </h4>
-                <h3> {goal}</h3>
 
-            </div>
-            """,
-            unsafe_allow_html=True
+            st.markdown(
+                f"""
+                <div class="about-card">
+                    <h4 style="font-size: 1.3rem;">{goal}</h4>
+
+                </div>
+                """,
+                unsafe_allow_html=True
             )
 
-            # coll[i].metric(f'{goal} ',f'{number} %'  )
-
-
-    st.markdown('</div>', unsafe_allow_html=True)
+    st.markdown("<br><br>", unsafe_allow_html=True)
     st.divider()
-
 
     st.markdown("<br><br>", unsafe_allow_html=True)
     st.markdown("<br><br>", unsafe_allow_html=True)
@@ -759,26 +847,27 @@ with tabs[0]:
     st.markdown("<br><br>", unsafe_allow_html=True)
     st.markdown("<br><br>", unsafe_allow_html=True)
 
-
     # 6. Team Members
     st.header(content[st.session_state.language]['team']['team_title'])
-    cols = st.columns(5)  # 5 columns for desktop
+    cols = st.columns(5)
+
     for i, member in enumerate(content[st.session_state.language]['team']['team']):
         with cols[i]:
             name = member['name']
             more = member['more']
             linkedin_url = member['linkedin']
-            # st.image("https://imgs.search.brave.com/oa78EHs9PgwVEO6XrLIXpGBXSIFNJzLWgQSgzwhVxMk/rs:fit:860:0:0:0/g:ce/aHR0cHM6Ly9pLnBp/bmltZy5jb20vb3Jp/Z2luYWxzLzJjL2Ji/LzBlLzJjYmIwZWU2/YzFjNTViMTA0MTY0/MjEyOGM5MDJkYWRk/LmpwZw", caption=member['name'], width=120)
-            st.markdown(f'<div class="team-card"> \n \n {name} \n \n  {more} \n \n  <a href="{linkedin_url}"><img src="https://img.icons8.com/color/30/000000/linkedin.png" class="linkedin-icon"></a>' , unsafe_allow_html=True)
+            st.markdown(
+                f"""
+                <div class="team-card">
+                    <h5 style="font-size: 1rem;">{name}</h5>
+                    <p>{more}</p>
+                    <a href="{linkedin_url}"><img src="https://img.icons8.com/color/30/000000/linkedin.png" class="linkedin-icon"></a>
+                </div>
+                """,
+                unsafe_allow_html=True
+            )
 
-            # st.subheader(f"{member['emoji']} {member['name']}")
-            # if member['linkedin']:
-            #     linkedin_url = member['linkedin']
-            #     st.markdown(f' <a href="{linkedin_url}"><img src="https://img.icons8.com/color/30/000000/linkedin.png" class="linkedin-icon"></a>', unsafe_allow_html=True)
-            #     st.markdown('</div>', unsafe_allow_html=True)
-        st.markdown('</div>', unsafe_allow_html=True)
-
-
+    st.markdown("<br><br>", unsafe_allow_html=True)
 
     # Page 3: Crowd Prediction
 with tabs[1]:
@@ -875,12 +964,14 @@ with tabs[1]:
                         title="توقع الحشود" if st.session_state.language == 'Arabic' else "Crowd Forecast",
                         labels={"Average Crowd Size": "متوسط حجم الحشود" if st.session_state.language == 'Arabic' else "Average Crowd Size"}
                     )
+
                     fig.update_traces(marker_color='#00ff00')
                     fig.update_layout(
                         plot_bgcolor='black',
                         paper_bgcolor='black',
                         font_color='white',
                         title_font_color='white'
+
                     )
                     st.plotly_chart(fig, use_container_width=True)
 
@@ -1123,14 +1214,14 @@ with tabs[3]:
                 #         "variable": "نوع المورد" if st.session_state.language == 'Arabic' else "Resource Type"
                 #     }
                 # )
-                fig.update_traces(marker_color='#00ff00')
-                fig.update_layout(
-                    plot_bgcolor='black',
-                    paper_bgcolor='black',
-                    font_color='white',
-                    title_font_color='white'
-                )
-                st.plotly_chart(fig, use_container_width=True)
+                # fig.update_traces(marker_color='#00ff00')
+                # fig.update_layout(
+                #     plot_bgcolor='black',
+                #     paper_bgcolor='black',
+                #     font_color='white',
+                #     title_font_color='white'
+                # )
+                # st.plotly_chart(fig, use_container_width=True)
     else:
         st.warning("يرجى إنشاء توقعات أولاً من صفحة التوقعات." if st.session_state.language == 'Arabic' else "Please generate a forecast first from the Prediction page.")
 # Page 6: Video Gallery & Live Detection
@@ -1143,6 +1234,7 @@ with tabs[2]:
     col1, col2 = st.columns(2)
     video_files = [
         "videos/output_result_tawaf_compresesed.mp4",
+        # "Footage1.mp4",
         "videos/output_result_tawaf2_compressed.mp4",
         "videos/output_result_saye_compressed.mp4",
         "videos/output_result_kabbah_compressed.mp4"  # Will be labeled as "Other Areas"
@@ -1411,7 +1503,7 @@ with tabs[2]:
 
                 # Crop the bottom for calculations
                 height, width = frame_rgb.shape[:2]
-                roi_top = int(height * 0.55)
+                roi_top = int(height * 0.50)
                 roi_frame = frame_rgb[roi_top:, :]
                 roi_height, roi_width = roi_frame.shape[:2]
 
@@ -1501,6 +1593,339 @@ with tabs[2]:
 
         except Exception as e:
             st.error(f"خطأ في معالجة الفيديو: {str(e)}" if st.session_state.language == 'Arabic' else f"Error processing video: {str(e)}")
+
+
+# ---------------------------
+
+# تبويب إدارة الأدوار
+with tabs[6]:
+
+    st.title("إدارة الأدوار" if st.session_state.language == 'Arabic' else "Floor Management")
+    st.write("مسح رموز QR لإدارة دخول المعتمرين إلى الأدوار الثلاثة." if st.session_state.language == 'Arabic' else "Scan QR codes to manage pilgrim entry to the three floors.")
+
+    # التحقق من وجود جدول floors
+    try:
+        conn = sqlite3.connect("crowd_management.db")
+        cursor = conn.cursor()
+        cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='floors'")
+        if not cursor.fetchone():
+            st.error("جدول 'floors' غير موجود. يرجى إعادة تشغيل التطبيق أو التحقق من قاعدة البيانات.")
+            logger.error("Table 'floors' does not exist in the database.")
+            init_db()  # محاولة إعادة إنشاء الجدول
+        else:
+            cursor.execute("SELECT floor, current_count, max_capacity, status FROM floors")
+            floors_data = pd.DataFrame(cursor.fetchall(), columns=["Floor", "Current Count", "Max Capacity", "Status"])
+            if st.session_state.language == 'Arabic':
+                floors_data["Floor"] = floors_data["Floor"].replace({"Ground": "الأرضي", "First": "الأول", "Second": "الثاني"})
+                floors_data["Status"] = floors_data["Status"].replace({"Available": "متاح", "Crowded": "مزدحم"})
+
+            st.subheader("حالة الأدوار" if st.session_state.language == 'Arabic' else "Floors Status")
+            st.dataframe(floors_data, use_container_width=True)
+
+            # رسم بياني
+            fig = px.bar(
+                floors_data,
+                x="Floor",
+                y="Current Count",
+                color="Status",
+                title="عدد الأشخاص في كل دور" if st.session_state.language == 'Arabic' else "Number of People per Floor",
+                color_discrete_map={"متاح": "green", "مزدحم": "red", "Available": "green", "Crowded": "red"}
+            )
+            fig.update_layout(plot_bgcolor='black', paper_bgcolor='black', font_color='white', title_font_color='white')
+            st.plotly_chart(fig, use_container_width=True)
+
+            # إنشاء رمز QR
+            st.subheader("إنشاء رمز QR لمعتمر جديد" if st.session_state.language == 'Arabic' else "Generate QR Code for New Pilgrim")
+            with st.form("generate_qr_form"):
+                pilgrim_id = str(uuid.uuid4())
+                if st.form_submit_button("إنشاء" if st.session_state.language == 'Arabic' else "Generate"):
+                    qr_data = {
+                        "pilgrim_id": pilgrim_id,
+                        "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                    }
+                    encrypted_data = cipher.encrypt(json.dumps(qr_data).encode()).decode()
+                    qr = qrcode.QRCode(version=1, box_size=10, border=5)
+                    qr.add_data(encrypted_data)
+                    qr.make(fit=True)
+                    img = qr.make_image(fill="black", back_color="white")
+                    qr_path = f"qr_codes/{pilgrim_id}.png"
+                    img.save(qr_path)
+                    st.image(qr_path, caption="رمز QR للمعتمر" if st.session_state.language == 'Arabic' else "QR Code for Pilgrim")
+                    st.write(f"معرف المعتمر: {pilgrim_id}")
+                    st.write(f"محتوى رمز QR (للمحاكاة): {encrypted_data}")
+
+            # مسح رمز QR
+            st.subheader("مسح رمز QR" if st.session_state.language == 'Arabic' else "Scan QR Code")
+            with st.form("scan_qr_form"):
+                qr_content = st.text_input(
+                    "أدخل محتوى رمز QR (للمحاكاة)" if st.session_state.language == 'Arabic' else "Enter QR Code Content (for simulation)",
+                    help="انسخ النص المشفر من رمز QR المُنشأ أو امسح رمز QR باستخدام قارئ" if st.session_state.language == 'Arabic' else "Copy the encrypted text from the generated QR code or scan the QR code with a reader"
+                )
+                selected_floor = st.selectbox(
+                    "اختر الدور" if st.session_state.language == 'Arabic' else "Select Floor",
+                    ["الأرضي", "الأول", "الثاني"] if st.session_state.language == 'Arabic' else ["Ground", "First", "Second"],
+                    key="qr_floor_select"
+                )
+                scan_type = st.radio(
+                    "نوع المسح" if st.session_state.language == 'Arabic' else "Scan Type",
+                    ["دخول", "خروج"] if st.session_state.language == 'Arabic' else ["Entry", "Exit"],
+                    key="qr_scan_type"
+                )
+                submitted = st.form_submit_button("مسح" if st.session_state.language == 'Arabic' else "Scan")
+
+                if submitted:
+                    if not qr_content:
+                        st.error("يرجى إدخال محتوى رمز QR." if st.session_state.language == 'Arabic' else "Please enter QR code content.")
+                    else:
+                        try:
+                            # فك التشفير
+                            decrypted_data = json.loads(cipher.decrypt(qr_content.encode()).decode())
+                            pilgrim_id = decrypted_data.get("pilgrim_id")
+                            if not pilgrim_id:
+                                raise ValueError("معرف المعتمر مفقود في بيانات رمز QR.")
+
+                            # تحويل اسم الدور إلى اسم قاعدة البيانات
+                            floor_map = {"الأرضي": "Ground", "الأول": "First", "الثاني": "Second"} if st.session_state.language == 'Arabic' else {}
+                            db_floor = floor_map.get(selected_floor, selected_floor)
+
+                            # التحقق من اتصال قاعدة البيانات
+                            cursor.execute("SELECT 1 FROM floors WHERE floor = ?", (db_floor,))
+                            if not cursor.fetchone():
+                                raise sqlite3.Error(f"الدور {db_floor} غير موجود في قاعدة البيانات.")
+
+                            if scan_type == "دخول" or scan_type == "Entry":
+                                cursor.execute("SELECT current_count, max_capacity FROM floors WHERE floor = ?", (db_floor,))
+                                result = cursor.fetchone()
+                                if not result:
+                                    raise sqlite3.Error(f"لا يمكن استرجاع بيانات الدور {db_floor}.")
+                                current_count, max_capacity = result
+
+                                if current_count >= max_capacity * 0.95:  # تحذير عند اقتراب السعة
+                                    st.warning(f"الدور {selected_floor} يقترب من السعة القصوى ({current_count}/{max_capacity}).")
+                                if current_count < max_capacity:
+                                    cursor.execute(
+                                        "INSERT OR REPLACE INTO pilgrims (id, floor, entry_time) VALUES (?, ?, ?)",
+                                        (pilgrim_id, db_floor, datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
+                                    )
+                                    cursor.execute(
+                                        "UPDATE floors SET current_count = current_count + 1, status = ?, last_updated = ? WHERE floor = ?",
+                                        ("Crowded" if current_count + 1 >= max_capacity else "Available",
+                                         datetime.now().strftime("%Y-%m-%d %H:%M:%S"), db_floor)
+                                    )
+                                    cursor.execute(
+                                        "INSERT INTO activity_log (pilgrim_id, action, floor, timestamp) VALUES (?, ?, ?, ?)",
+                                        (pilgrim_id, "Entry", db_floor, datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
+                                    )
+                                    conn.commit()
+                                    st.success(f"تم فتح البوابة للدور {selected_floor}!" if st.session_state.language == 'Arabic' else f"Gate opened for {selected_floor} floor!")
+                                else:
+                                    cursor.execute("SELECT floor FROM floors WHERE current_count < max_capacity AND floor != ?", (db_floor,))
+                                    available_floors = [row[0] for row in cursor.fetchall()]
+                                    if st.session_state.language == 'Arabic':
+                                        available_floors = [k for k, v in floor_map.items() if v in available_floors]
+                                    if available_floors:
+                                        st.warning(f"الدور {selected_floor} مزدحم، جرب: {', '.join(available_floors)}")
+                                    else:
+                                        st.error("جميع الأدوار مزدحمة، يرجى المحاولة لاحقًا.")
+                            else:  # خروج
+                                cursor.execute(
+                                    "UPDATE pilgrims SET exit_time = ? WHERE id = ? AND floor = ? AND exit_time IS NULL",
+                                    (datetime.now().strftime("%Y-%m-%d %H:%M:%S"), pilgrim_id, db_floor)
+                                )
+                                if cursor.rowcount > 0:
+                                    cursor.execute(
+                                        "UPDATE floors SET current_count = current_count - 1, status = 'Available', last_updated = ? WHERE floor = ?",
+                                        (datetime.now().strftime("%Y-%m-%d %H:%M:%S"), db_floor)
+                                    )
+                                    cursor.execute(
+                                        "INSERT INTO activity_log (pilgrim_id, action, floor, timestamp) VALUES (?, ?, ?, ?)",
+                                        (pilgrim_id, "Exit", db_floor, datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
+                                    )
+                                    conn.commit()
+                                    st.success(f"تم تسجيل الخروج من الدور {selected_floor}!" if st.session_state.language == 'Arabic' else f"Exit recorded from {selected_floor} floor!")
+                                else:
+                                    st.error("لم يتم العثور على سجل دخول لهذا المعتمر في هذا الدور." if st.session_state.language == 'Arabic' else "No entry record found for this pilgrim on this floor.")
+                        except cryptography.fernet.InvalidToken:
+                            st.error("رمز QR غير صالح أو مفتاح التشفير غير متطابق. تأكد من استخدام نفس المفتاح." if st.session_state.language == 'Arabic' else "Invalid QR code or encryption key mismatch. Ensure the same key is used.")
+                            logger.error("InvalidToken: Failed to decrypt QR code content.")
+                        except json.JSONDecodeError:
+                            st.error("بيانات رمز QR غير صالحة. تأكد من إدخال محتوى مشفر صحيح." if st.session_state.language == 'Arabic' else "Invalid QR code data. Ensure correct encrypted content is entered.")
+                            logger.error("JSONDecodeError: Failed to parse decrypted QR code data.")
+                        except ValueError as ve:
+                            st.error(f"خطأ في بيانات رمز QR: {str(ve)}" if st.session_state.language == 'Arabic' else f"QR code data error: {str(ve)}")
+                            logger.error(f"ValueError: {str(ve)}")
+                        except sqlite3.Error as dbe:
+                            st.error(f"خطأ في قاعدة البيانات: {str(dbe)}" if st.session_state.language == 'Arabic' else f"Database error: {str(dbe)}")
+                            logger.error(f"Database error: {str(dbe)}")
+                        except Exception as e:
+                            st.error(f"خطأ غير متوقع في معالجة رمز QR: {str(e)}" if st.session_state.language == 'Arabic' else f"Unexpected error processing QR code: {str(e)}")
+                            logger.error(f"Unexpected QR code processing error: {e}")
+
+        conn.close()
+    except sqlite3.Error as e:
+        st.error(f"خطأ في الوصول إلى قاعدة البيانات: {e}")
+        logger.error(f"Database access error: {e}")
+# تبويب التقارير
+with tabs[7]:
+    st.title("التقارير" if st.session_state.language == 'Arabic' else "Reports")
+    st.write("عرض وتنزيل تقارير حول حركة المعتمرين في الأدوار." if st.session_state.language == 'Arabic' else "View and download reports on pilgrim movement across floors.")
+
+    # دالة لإنشاء PDF
+    class PDF(FPDF):
+        def header(self):
+            self.set_font('Arial', 'B', 12)
+            title = 'Crowd Management Report' if st.session_state.language == 'English' else 'تقرير إدارة الحشود'
+            self.cell(0, 10, title, 0, 1, 'C')
+
+        def footer(self):
+            self.set_y(-15)
+            self.set_font('Arial', 'I', 8)
+            self.cell(0, 10, f'Page {self.page_no()}', 0, 0, 'C')
+
+    def generate_pdf_report(data):
+        try:
+            pdf = PDF()
+            pdf.add_page()
+            pdf.set_font('Arial', '', 12)  # Use DejaVu for Arabic support if needed
+            for i, row in data.iterrows():
+                floor = row['Floor']
+                entries = row.get('Entries', 0) if st.session_state.language == 'English' else row.get('دخول', 0)
+                exits = row.get('Exits', 0) if st.session_state.language == 'English' else row.get('خروج', 0)
+                text = f"{floor}: {entries} entries, {exits} exits" if st.session_state.language == 'English' else f"{floor}: {entries} دخول, {exits} خروج"
+                pdf.cell(0, 10, text, 0, 1)
+            output = io.BytesIO()
+            pdf_data = pdf.output(dest='S').encode('latin1')  # Output to string, encode to bytes
+            output.write(pdf_data)
+            output.seek(0)
+            return output.getvalue()
+        except Exception as e:
+            logger.error(f"Error generating PDF report: {e}")
+            st.error(f"خطأ في إنشاء تقرير PDF: {e}" if st.session_state.language == 'Arabic' else f"Error generating PDF report: {e}")
+            return None
+
+    try:
+        conn = sqlite3.connect("crowd_management.db")
+        cursor = conn.cursor()
+
+        # التحقق من وجود جدول activity_log
+        cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='activity_log'")
+        if not cursor.fetchone():
+            st.error("جدول 'activity_log' غير موجود. يرجى إعادة تشغيل التطبيق أو التحقق من قاعدة البيانات.")
+            logger.error("Table 'activity_log' does not exist in the database.")
+            init_db()  # محاولة إعادة إنشاء الجدول
+        else:
+            # خيارات التصفية
+            st.subheader("تصفية التقارير" if st.session_state.language == 'Arabic' else "Filter Reports")
+            period = st.selectbox(
+                "اختر الفترة" if st.session_state.language == 'Arabic' else "Select Period",
+                ["اليوم", "الأسبوع", "الشهر"] if st.session_state.language == 'Arabic' else ["Today", "This Week", "This Month"],
+                key="report_period"
+            )
+            selected_floor = st.selectbox(
+                "اختر الدور (اختياري)" if st.session_state.language == 'Arabic' else "Select Floor (Optional)",
+                ["الكل", "الأرضي", "الأول", "الثاني"] if st.session_state.language == 'Arabic' else ["All", "Ground", "First", "Second"],
+                key="report_floor"
+            )
+
+            # تحديد نطاق الوقت
+            end_date = datetime.now()
+            if period == "اليوم" or period == "Today":
+                start_date = end_date - timedelta(days=1)
+            elif period == "الأسبوع" or period == "This Week":
+                start_date = end_date - timedelta(days=7)
+            else:
+                start_date = end_date - timedelta(days=30)
+
+            # استرجاع البيانات
+            floor_map = {"الأرضي": "Ground", "الأول": "First", "الثاني": "Second"} if st.session_state.language == 'Arabic' else {}
+            floor_filter = "" if selected_floor == "الكل" or selected_floor == "All" else f"AND floor = '{floor_map.get(selected_floor, selected_floor)}'"
+            query = f"""
+                SELECT floor, action, COUNT(*) as count
+                FROM activity_log
+                WHERE timestamp >= ? AND timestamp <= ? {floor_filter}
+                GROUP BY floor, action
+            """
+            cursor.execute(query, (start_date.strftime("%Y-%m-%d %H:%M:%S"), end_date.strftime("%Y-%m-%d %H:%M:%S")))
+            report_data = pd.DataFrame(cursor.fetchall(), columns=["Floor", "Action", "Count"])
+
+            # التحقق من وجود بيانات
+            if report_data.empty:
+                st.warning("لا توجد بيانات متاحة للفترة المحددة. حاول تسجيل بعض الأنشطة في تبويب 'إدارة الأدوار'." if st.session_state.language == 'Arabic' else "No data available for the selected period. Try recording some activities in the 'Floor Management' tab.")
+                report_pivot = pd.DataFrame(columns=["Floor", "Entries", "Exits"])
+                if st.session_state.language == 'Arabic':
+                    report_pivot.columns = ["Floor", "دخول", "خروج"]
+            else:
+                # إنشاء جدول دمج
+                report_pivot = report_data.pivot_table(index="Floor", columns="Action", values="Count", fill_value=0).reset_index()
+                logger.info(f"Pivot table columns: {report_pivot.columns.tolist()}")
+
+                # التحقق من الأعمدة الناتجة
+                if len(report_pivot.columns) == 1:
+                    # إذا كان هناك عمود واحد فقط (Floor)، أضف أعمدة فارغة
+                    report_pivot["Entries"] = 0
+                    report_pivot["Exits"] = 0
+                    if st.session_state.language == 'Arabic':
+                        report_pivot.columns = ["Floor", "دخول", "خروج"]
+                    else:
+                        report_pivot.columns = ["Floor", "Entries", "Exits"]
+                else:
+                    # إعادة تسمية الأعمدة بناءً على اللغة
+                    if "Entry" in report_pivot.columns:
+                        report_pivot.columns = ["Floor", "Entries", "Exits"]
+                    else:
+                        report_pivot.columns = ["Floor", "دخول", "خروج"]
+
+                # تحويل أسماء الأدوار إلى العربية إذا لزم الأمر
+                if st.session_state.language == 'Arabic':
+                    report_pivot["Floor"] = report_pivot["Floor"].replace({"Ground": "الأرضي", "First": "الأول", "Second": "الثاني"})
+
+            # عرض التقرير
+            st.subheader("التقرير" if st.session_state.language == 'Arabic' else "Report")
+            st.dataframe(report_pivot, use_container_width=True)
+
+            # رسم بياني
+            if not report_pivot.empty:
+                fig = px.bar(
+                    report_pivot.melt(id_vars="Floor", value_vars=["Entries", "Exits"] if st.session_state.language == 'English' else ["دخول", "خروج"], var_name="Action", value_name="Count"),
+                    x="Floor",
+                    y="Count",
+                    color="Action",
+                    barmode="group",
+                    title="حركة الدخول والخروج حسب الدور" if st.session_state.language == 'Arabic' else "Entry and Exit Movement by Floor",
+                    labels={"Count": "العدد" if st.session_state.language == 'Arabic' else "Count", "Action": "الإجراء" if st.session_state.language == 'Arabic' else "Action"}
+                )
+                fig.update_layout(plot_bgcolor='black', paper_bgcolor='black', font_color='white', title_font_color='white')
+                st.plotly_chart(fig, use_container_width=True)
+            else:
+                st.info("لا توجد بيانات لعرض الرسم البياني." if st.session_state.language == 'Arabic' else "No data available to display the chart.")
+
+            # تنزيل التقرير
+            st.subheader("تنزيل التقرير" if st.session_state.language == 'Arabic' else "Download Report")
+            csv = report_pivot.to_csv(index=False)
+            st.download_button(
+                "تنزيل كـ CSV" if st.session_state.language == 'Arabic' else "Download as CSV",
+                csv,
+                "report.csv",
+                "text/csv",
+                key="download-csv"
+            )
+            pdf_data = generate_pdf_report(report_pivot)
+            if pdf_data:
+                st.download_button(
+                    "تنزيل كـ PDF" if st.session_state.language == 'Arabic' else "Download as PDF",
+                    pdf_data,
+                    "report.pdf",
+                    "application/pdf",
+                    key="download-pdf"
+                )
+            else:
+                st.error("فشل إنشاء ملف PDF. يرجى التحقق من السجلات لمزيد من التفاصيل." if st.session_state.language == 'Arabic' else "Failed to generate PDF file. Please check the logs for more details.")
+
+        conn.close()
+    except sqlite3.Error as e:
+        st.error(f"خطأ في الوصول إلى قاعدة البيانات: {e}" if st.session_state.language == 'Arabic' else f"Database access error: {e}")
+        logger.error(f"Database access error in reports tab: {e}")
+# ------------------------------
 
 # Footer
 st.markdown("---")
