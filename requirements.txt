@@ -9,14 +9,7 @@ python-telegram-bot==20.7
 darts==0.30.0
 torch==2.3.1
 torchvision==0.18.1
-
 qrcode==7.4.2
-pillow==10.4.0
-
-fernet==2.4.0
-json==2.0.9
-uuid==1.30.0
-io==1.0.0
-FPDF==1.7.2
-os==0.1.4
-logging==0.5.1.2
+cryptography==43.0.1
+fpdf==1.7.2
+rich==13.7.1
