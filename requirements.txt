@@ -13,7 +13,7 @@ torchvision==0.18.1
 qrcode==7.4.2
 pillow==10.4.0
 
-cryptography==2.4.0
+fernet==2.4.0
 json==2.0.9
 uuid==1.30.0
 io==1.0.0
