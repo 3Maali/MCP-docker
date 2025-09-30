@@ -781,7 +781,7 @@ with tabs[0]:
     col1, col2 = st.columns([1, 3])
 
     with col1:
-        st.image("team.png", width=150)
+        st.image("team.png", width=200)
 
     with col2:
         for i, target in enumerate(content[st.session_state.language]['team']['target_audience']):
