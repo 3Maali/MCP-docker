@@ -160,7 +160,7 @@ content = {
                 {"name": "العنود نايف", "emoji": ":purple_heart:","more":"Team Leader" ,  "linkedin": "https://www.linkedin.com/in/alanoud-razin-98aa6b2a7/"},
                 {"name": "معالي الخالدي", "emoji": ":blue_heart:","more":"Team Member" , "linkedin": "https://www.linkedin.com/in/maali-alkhaldi-991967215/"},
                 {"name": "سارة العتيبي", "emoji": ":green_heart:", "more":"Team Member" ,"linkedin": "https://www.linkedin.com/in/sarah-alotaibi-6576921a7?utm_source=share&utm_campaign=share_via&utm_content=profile&utm_medium=android_app"},
-                {"name":"اثير الكناني", "emoji": ":white_heart:", "more":"Team Member" ,"linkedin": "https://www.linkedin.com/in/jana-almujally-031a5223b?utm_source=share&utm_campaign=share_via&utm_content=profile&utm_medium=ios_app"},
+                {"name":"جنى المجلي", "emoji": ":white_heart:", "more":"Team Member" ,"linkedin": "https://www.linkedin.com/in/jana-almujally-031a5223b?utm_source=share&utm_campaign=share_via&utm_content=profile&utm_medium=ios_app"},
                 {"name": " أبرار الدوسري", "emoji": ":yellow_heart:","more":"Team Member" , "linkedin": "http://linkedin.com/in/abrar-aldosari-592199215"}
             ],
             'map_locations': ["الكعبة", "الصفا", "المروة", "الطواف"]
@@ -243,7 +243,7 @@ content = {
     },
     'English': {
         'team': {
-            'title': "SafeCrowd  ",
+            'title': "Makkah Crowd Management Project  ",
             'overview': "The Makkah Crowd Management Project is an innovative AI-driven initiative to enhance crowd management during Hajj and Umrah. Using advanced data analytics and machine learning, we predict crowd density in Tawaf, Saei, and other areas, enabling authorities to reduce risks, optimize movement, and ensure a safer, more efficient experience for millions of pilgrims.",
             'target_audience': [
 
@@ -277,7 +277,7 @@ content = {
                 {"name": "Alanoud Naif", "emoji": ":purple_heart:", "more":"Team Leader","linkedin": "https://www.linkedin.com/in/alanoud-razin-98aa6b2a7/"},
                 {"name": "Maali Alkhaldi", "emoji": ":blue_heart:", "more":"Team Member","linkedin": "https://www.linkedin.com/in/maali-alkhaldi-991967215/"},
                 {"name": "Sarah Alotaibi", "emoji": ":green_heart:", "more":"Team Member","linkedin": "https://www.linkedin.com/in/sarah-alotaibi-6576921a7?utm_source=share&utm_campaign=share_via&utm_content=profile&utm_medium=android_app"},
-                {"name": "ِAtheer Alkenani", "emoji": ":white_heart:", "more":"Team Member","linkedin": "https://www.linkedin.com/in/jana-almujally-031a5223b?utm_source=share&utm_campaign=share_via&utm_content=profile&utm_medium=ios_app"},
+                {"name": "ِJana Almujally", "emoji": ":white_heart:", "more":"Team Member","linkedin": "https://www.linkedin.com/in/jana-almujally-031a5223b?utm_source=share&utm_campaign=share_via&utm_content=profile&utm_medium=ios_app"},
                 {"name": "Abrar Aldosari", "emoji": ":yellow_heart:", "more":"Team Member","linkedin": "http://linkedin.com/in/abrar-aldosari-592199215"}
             ],
             'map_locations': ["Kaaba", "Safa", "Marwa", "Tawaf"]
@@ -654,11 +654,11 @@ st.markdown(global_css, unsafe_allow_html=True)
     # Sidebar for Language Selector and Alert Settings
 with st.sidebar:
     # st.image("SafeCrowd-Picsart-AiImageEnhancer.png", width=100)
-    st.image("LogoSafeCrowd.png",width=100)
+    # st.image("LogoSafeCrowd.png",width=100)
 
 
-    # st.image("sda_sda.png",width=90)
-    # st.image("lewagon_logo.png" , width=160)  # Consistent width with CSS
+    st.image("sda_sda.png",width=90)
+    st.image("lewagon_logo.png" , width=160)  # Consistent width with CSS
 
 
     st.markdown('<div class="language-selector">', unsafe_allow_html=True)
@@ -723,12 +723,12 @@ st.session_state.language = 'Arabic' if language == "العربية" else 'Engli
 with tabs[0]:
 
     col_1, col_2 = st.columns([3, 1])
-    col_2.image("SafeCrowd-Picsart-AiImageEnhancer.png", width=200)
-    col_1.image("LogoSafeCrowd.png" ,width=120 )
+    # col_2.image("SafeCrowd-Picsart-AiImageEnhancer.png", width=200)
+    # col_1.image("LogoSafeCrowd.png" ,width=120 )
 
 
-    # col_1.image("sda_sda.png", width=150)
-    # col_2.image("lewagon_logo.png", width=250)
+    col_1.image("sda_sda.png", width=150)
+    col_2.image("lewagon_logo.png", width=250)
 
     # Hero Section with Image Background
 
